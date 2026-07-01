@@ -3,43 +3,31 @@ name: Deploy Portal to IIT Indore Server
 on:
   push:
     branches:
-      - main # Triggers the automation every time you save to the main branch
+      - main
 
 jobs:
   deploy-to-iiti:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Pull the fresh code from your GitHub repository
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Set up the latest Node.js environment to match GitHub's 2026 runners
+      # Uses Node 24 directly to match modern specifications
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
 
-      # 3. Locate the project folder safely and run the compilation tools
       - name: Install & Compile Frontend
         run: |
-          # Safely locate the first directory containing a package.json file
           TARGET_DIR=$(find . -name package.json -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
-          echo "Target directory successfully locked: $TARGET_DIR"
+          echo "Target directory locked: $TARGET_DIR"
           cd "$TARGET_DIR"
           
-          # Clean install and compile
-          npm install
-          npm install laravel-vite-plugin @tailwindcss/vite --save-dev
-          npx vite build
-
-      # 4. Sync the compiled code securely to the IITI Server via Port 3004
-      - name: SFTP Deploy to CITC Infrastructure
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.IITI_HOST }}
-          username: ${{ secrets.IITI_USERNAME }}
-          password: ${{ secrets.IITI_PASSWORD }}
-          port: 3004
-          local-dir: ./
-          server-dir: ./ # Maps directly to your assigned hosting space root
+          # Run clean installation with legacy peer support to ignore version warnings
+          npm install --legacy-peer-deps
+          npm install laravel-vite-plugin @tailwindcss/vite --save-dev --legacy-peer-deps
+          
+          # Run build with full error printouts enabled
+          npx vite build --debug
